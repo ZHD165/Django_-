@@ -1,12 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="beb089f4-49a8-4af0-a408-ce0f208b9ce7" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/meiduo_mall/apps/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/meiduo_mall/settings/dev.py" beforeDir="false" afterPath="$PROJECT_DIR$/meiduo_mall/settings/dev.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/meiduo_mall/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/meiduo_mall/urls.py" afterDir="false" />
-    </list>
+    <list default="true" id="beb089f4-49a8-4af0-a408-ce0f208b9ce7" name="Default Changelist" comment="" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -115,7 +110,7 @@
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds" extendedState="7">
+  <component name="ProjectFrameBounds" extendedState="6">
     <option name="x" value="-78" />
     <option name="y" value="78" />
     <option name="width" value="1160" />
@@ -128,17 +123,7 @@
     </navigator>
     <panes>
       <pane id="Scope" />
-      <pane id="ProjectPane">
-        <subPane>
-          <expand>
-            <path>
-              <item name="meiduo_mall" type="b2602c69:ProjectViewProjectNode" />
-              <item name="meiduo_mall" type="462c0819:PsiDirectoryNode" />
-            </path>
-          </expand>
-          <select />
-        </subPane>
-      </pane>
+      <pane id="ProjectPane" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -258,16 +243,15 @@
       <option name="presentableId" value="Default" />
       <updated>1587170415841</updated>
       <workItem from="1587170417784" duration="5914000" />
-      <workItem from="1587343374771" duration="3415000" />
+      <workItem from="1587343374771" duration="3417000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="9329000" />
+    <option name="totallyTimeSpent" value="9331000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="67" y="25" width="1297" height="589" extended-state="7" />
-    <editor active="true" />
+    <frame x="67" y="25" width="1297" height="589" extended-state="6" />
     <layout>
       <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.25461847" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
