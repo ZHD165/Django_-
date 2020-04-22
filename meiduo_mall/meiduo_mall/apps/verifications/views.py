@@ -1,8 +1,15 @@
+import logging
+import random
+from django import http
 from django.shortcuts import render
 from django.views import View
 from django_redis import get_redis_connection
 from django.http import HttpResponse
 from meiduo_mall.libs.captcha.captcha import captcha
+
+logger = logging.getLogger('django')
+from meiduo_mall.libs.yuntongxun.ccp_sms import CCP
+from celery_tasks.sms.tasks import ccp_send_sms_code
 
 
 class ImageCodeView(View):
@@ -23,17 +30,17 @@ class ImageCodeView(View):
                             content_type='image/jpg')
 
 
-import logging
-
-logger = logging.getLogger('django')
-import random
-from django import http
-from meiduo_mall.libs.yuntongxun.ccp_sms import CCP
-
-
 class SMSCodeView(View):
 
     def get(self, reqeust, mobile):
+        '''   '''
+        # 额外增加的功能
+        # 0.从redis中获取60s保存的信息
+        # redis_conn = get_redis_connection('verify_code')
+        # flag = redis_conn.get('flag_%s' % mobile)
+        # if flag:
+        #     return JsonResponse{'code':400,
+        #                         'errmsg':'比传参数不为空'}
         redis_conn = get_redis_connection('verify_code')
 
         send_flag = redis_conn.get('send_flag_%s' % mobile)
@@ -59,12 +66,12 @@ class SMSCodeView(View):
         # 4. 提取图形验证码 #
         if image_code_server is None:
             return http.JsonResponse({'code': 400,
-                                    'errmsg': '图形验证码失效'})
+                                      'errmsg': '图形验证码失效'})
         # 5. 删除图形验证码，避免恶意测试图形验证码
         try:
             redis_conn.delete('img_%s' % uuid)
         except Exception as e:
-            logger.error(e)
+            logger.info(e)
 
         # 6. 对比图形验证码
         # bytes 转字符串
@@ -79,11 +86,12 @@ class SMSCodeView(View):
         sms_code = '%06d' % random.randint(0, 999999)
         logger.info(sms_code)
 
-        # 创建管道对象:
+        # 创建redis管道对象:
         pl = redis_conn.pipeline()
         # 8. 保存短信验证码
         # 短信验证码有效期，单位：300秒
         # redis_conn.setex('sms_%s' % mobile, 300, sms_code)
+        #将redis 请求添加到队列
         pl.setex('sms_%s' % mobile, 300, sms_code)
 
         # redis_conn.setex('send_flag_%s' % mobile, 60, 1)
@@ -92,8 +100,11 @@ class SMSCodeView(View):
         # 执行管道:
         pl.execute()
         # 9. 发送短信验证码
+
         # 短信模板
-        CCP().send_template_sms(mobile, [sms_code, 5], 1)
+        # CCP().send_template_sms(mobile, [sms_code, 5], 1)
+        #添加一个提示celery 抛出任务的提醒
+        ccp_send_sms_code.delay(mobile, sms_code)
         # 10. 响应结果
         return http.JsonResponse({'code': 0,
                                   'errmsg': '发送短信成功'})
