@@ -1,10 +1,14 @@
+import json
+import re
+from django import http
+from users.models import User
+from django.views import View
+from django.contrib.auth import login
 from django.http import JsonResponse
 from django.shortcuts import render
-
-# Create your views here.
-from django.views import View
-
-from users.models import User
+from meiduo_mall.utils.views import LoginRequiredMixin
+from django_redis import get_redis_connection
+from django.contrib.auth import login, authenticate
 
 
 class UsernameCountView(View):
@@ -38,12 +42,6 @@ class MobileCountView(View):
         return JsonResponse({'code': 0,
                              'errmsg': 'ok',
                              'count': count})
-
-
-import json
-import re
-from django import http
-from django_redis import get_redis_connection
 
 
 class RegisterView(View):
@@ -110,7 +108,104 @@ class RegisterView(View):
         except Exception as e:
             return http.JsonResponse({'code': 400,
                                       'errmsg': '保存到数据库出错'})
-
+        login(request, user)
         # 13.拼接json返回
-        return http.JsonResponse({'code': 0,
-                                  'errmsg': 'ok'})
+        # 生成响应对象
+        response = http.JsonResponse({'code': 0,
+                                      'errmsg': 'ok'})
+
+        # 在响应对象中设置用户名信息.
+        # 将用户名写入到 cookie，有效期 14 天
+        response.set_cookie('username',
+                            user.username,
+                            max_age=3600 * 24 * 14)
+
+        # 返回响应结果
+        return response
+
+
+class LoginView(View):
+
+    def post(self, request):
+        '''实现登录接口'''
+        # 1.接收json参数，获取每一个
+        dict = json.loads(request.body.decode())
+        username = dict.get('username')
+        password = dict.get('password')
+        remembered = dict.get('remembered')
+
+        # 2.整体校验，查看是否为空(整体 + 单个)
+        if not all([username, password]):
+            return http.JsonResponse({'code': 400,
+                                      'errmsg': '缺少必传参数'})
+
+        # 3.验证是否能够登录
+        user = authenticate(username=username,
+                            password=password)
+
+        # 判断是否为空,如果为空,返回
+        if user is None:
+            return http.JsonResponse({'code': 400,
+                                      'errmsg': '用户名或者密码错误'})
+
+        # 4.状态保持
+        login(request, user)
+
+        # 5.判断是否记住用户
+        if remembered != True:
+            # 7.如果没有记住: 关闭立刻失效
+            request.session.set_expiry(0)
+        else:
+            # 6.如果记住:  设置为两周有效
+            request.session.set_expiry(None)
+
+        # 8.返回json
+        # return http.JsonResponse({'code': 0,
+        #                          'errmsg': 'ok'})
+
+        # 生成响应对象
+        response = http.JsonResponse({'code': 0,
+                                      'errmsg': 'ok'})
+
+        # 在响应对象中设置用户名信息.
+        # 将用户名写入到 cookie，有效期 14 天
+        response.set_cookie('username',
+                            user.username,
+                            max_age=3600 * 24 * 14)
+
+        # 返回响应结果
+        return response
+
+    # 导入:
+
+
+from django.contrib.auth import logout
+
+
+class LogoutView(View):
+    """定义退出登录的接口"""
+
+    def delete(self, request):
+        """实现退出登录逻辑"""
+
+        # 清理 session
+        logout(request)
+
+        # 创建 response 对象.
+        response = http.JsonResponse({'code': 0,
+                                      'errmsg': 'ok'})
+
+        # 调用对象的 delete_cookie 方法, 清除cookie
+        response.delete_cookie('username')
+
+        # 返回响应
+        return response
+
+    # 给该类视图增加 Mixin 扩展类
+
+
+class UserInfoView(LoginRequiredMixin, View):
+    """用户中心"""
+
+    def get(self, request):
+        pass

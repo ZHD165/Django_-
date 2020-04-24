@@ -24,4 +24,10 @@ urlpatterns = [
     re_path(r'^mobiles/(?P<mobile>1[3-9]\d{9})/count/$', views.MobileCountView.as_view()),
 # 注册
     re_path(r'^register/$', views.RegisterView.as_view()),
+    # 用户名登录的子路由:
+    re_path(r'^login/$', views.LoginView.as_view()),
+# 退出登录
+    re_path(r'^logout/$', views.LogoutView.as_view()),
+# 用户中心的子路由
+    re_path(r'^info/$', views.UserInfoView.as_view()),
 ]
