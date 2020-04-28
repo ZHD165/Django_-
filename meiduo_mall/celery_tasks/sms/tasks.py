@@ -10,5 +10,5 @@ def ccp_send_sms_code(mobile, sms_code):
     result = CCP().send_template_sms(mobile,
                                      [sms_code, 5],
                                      1)
-    print(result)
+    # print(result)
     return result

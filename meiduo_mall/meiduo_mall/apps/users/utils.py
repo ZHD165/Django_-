@@ -1,7 +1,8 @@
 # 导入:
+from django.conf import settings
 from django.contrib.auth.backends import ModelBackend
 import re
-from .models import User
+from users.models import User
 
 
 def get_user_by_account(account):
@@ -48,3 +49,20 @@ class UsernameMobileAuthBackend(ModelBackend):
         if user and user.check_password(password):
             # 如果user存在, 密码正确, 则返回 user
             return user
+
+
+# from itsdangerous import TimedJSONWebSignatureSerializer
+# from django.conf import settings
+#
+#
+# def generate_access_token():
+#     '''生成一个token值，把token和url的前半部分拼接到一起，返回'''
+#     # TimedJSONWebSignatureSerializer(秘钥，有效期)
+#     obj = TimedJSONWebSignatureSerializer(settings.SECRET_KEY, expires_in=1800)
+#     dict = {
+#         'user_id': user.id,
+#         'email': user.email
+#     }
+#
+#     token = obj.dumps(dict).decode()
+#     return settings.EMAIL_VERIFY_URL + token
