@@ -4,7 +4,7 @@ import logging
 
 logger = logging.getLogger('django')
 from django import http
-from users.models import User
+from users.models import User, Address
 from django.views import View
 from django.contrib.auth import login, logout
 from django.http import JsonResponse, HttpResponse
@@ -15,6 +15,8 @@ from django.contrib.auth import login, authenticate
 # from .utils import generate_access_token
 # 从 celery_tasks 中导入:
 from celery_tasks.email.tasks import send_verify_email
+
+
 class UsernameCountView(View):
     def get(self, request, username):
         '''接受用户名，判断该用户名是否可以重复注册'''
@@ -189,11 +191,6 @@ class LoginView(View):
         return response
 
 
-
-
-
-
-
 # 取消登录，秩序传入request，删除session & sessionid，手动删除coogkie（username）
 class LogoutView(View):
     """定义退出登录的接口"""
@@ -206,7 +203,7 @@ class LogoutView(View):
 
         # 创建 response 对象.
         response = JsonResponse({'code': 0,
-                                'errmsg': 'ok'})
+                                 'errmsg': 'ok'})
 
         # 清除cookie（username），调用对象的 delete_cookie 方法, 清除cookie
         response.delete_cookie('username')
@@ -217,7 +214,7 @@ class LogoutView(View):
     # 给该类视图增加 Mixin 扩展类
 
 
-class UserInfoView(LoginRequiredMixin,View):
+class UserInfoView(LoginRequiredMixin, View):
 
     def get(self, request):
         '''只有登录用户才能进入该类视图'''
@@ -257,20 +254,20 @@ class EmailView(View):
         except Exception as  e:
             logger.error(e)
             return JsonResponse({'code': 400,
-                                      'errmsg': '添加邮箱失败'})
+                                 'errmsg': '添加邮箱失败'})
 
             # 响应添加邮箱结果
 
         # 6.给挡墙邮箱发送一份信
-            # # 调用发送的函数:
-            # # 用定义好的函数替换原来的字符串:
+        # # 调用发送的函数:
+        # # 用定义好的函数替换原来的字符串:
         verify_url = request.user.generate_access_token()
         # # 发送验证链接:
         send_verify_email.delay(email, verify_url)
         # 7.返回json 结果
 
         return JsonResponse({'code': 0,
-                            'errmsg': '添加邮箱成功'})
+                             'errmsg': '添加邮箱成功'})
 
 
 class VerifyEmailView(View):
@@ -284,14 +281,14 @@ class VerifyEmailView(View):
 
         # 校验参数：判断 token 是否为空和过期，提取 user
         if not token:
-            return JsonResponse({'code':400,
-                                  'errmsg':'缺少token'})
+            return JsonResponse({'code': 400,
+                                 'errmsg': '缺少token'})
 
         # 调用上面封装好的方法, 将 token 传入
         user = User.check_verify_email_token(token)
         if not user:
-            return http.JsonResponse({'code':400,
-                                  'errmsg':'无效的token'})
+            return http.JsonResponse({'code': 400,
+                                      'errmsg': '无效的token'})
 
         # 修改 email_active 的值为 True
         try:
@@ -299,10 +296,340 @@ class VerifyEmailView(View):
             user.save()
         except Exception as e:
             logger.error(e)
-            return JsonResponse({'code':400,
-                                  'errmsg':'激活邮件失败'})
+            return JsonResponse({'code': 400,
+                                 'errmsg': '激活邮件失败'})
 
         # 返回邮箱验证结果
-        return JsonResponse({'code':0,
-                                  'errmsg':'ok'})
+        return JsonResponse({'code': 0,
+                             'errmsg': 'ok'})
 
+
+class CreateAddressView(View):
+    """新增地址"""
+
+    def post(self, request):
+        """实现新增地址逻辑"""
+
+        # 获取地址个数:
+        try:
+            count = Address.objects.filter(user=request.user,
+                                           is_deleted=False).count()
+        except Exception as e:
+            return JsonResponse({'code': 400,
+                                 'errmsg': '获取地址数据出错'})
+        # 2.判断是否超过地址上限：最多20个
+        if count >= 20:
+            return JsonResponse({'code': 400,
+                                 'errmsg': '超过地址20个上限'})
+
+        # 3.接收参数（json）
+        json_dict = json.loads(request.body.decode())
+        receiver = json_dict.get('receiver')
+        province_id = json_dict.get('province_id')
+        city_id = json_dict.get('city_id')
+        district_id = json_dict.get('district_id')
+        place = json_dict.get('place')
+        mobile = json_dict.get('mobile')
+        tel = json_dict.get('tel')
+        email = json_dict.get('email')
+
+        # 4.总体校验参数
+        if not all([receiver, province_id, city_id, district_id, place, mobile]):
+            return JsonResponse({'code': 400,
+                                 'errmsg': '缺少必传参数'})
+
+        # 5.单个检验mobile
+        if not re.match(r'^1[3-9]\d{9}$', mobile):
+            return JsonResponse({'code': 400,
+                                 'errmsg': '参数mobile有误'})
+        # 6.tel
+        if tel:
+            if not re.match(r'^(0[0-9]{2,3}-)?([2-9][0-9]{6,7})+(-[0-9]{1,4})?$', tel):
+                return JsonResponse({'code': 400,
+                                     'errmsg': 'tel格式不正确'})
+        # 7.email
+        if email:
+            if not re.match(r'^[a-z0-9][\w\.\-]*@[a-z0-9\-]+(\.[a-z]{2,5}){1,2}$', email):
+                return JsonResponse({'code': 400,
+                                     'errmsg': '参数email有误'})
+
+        # 8.往address表中增加地址信息
+        try:
+            # create方法增加
+            address = Address.objects.create(
+                user=request.user,
+                title=receiver,
+                receiver=receiver,
+                province_id=province_id,
+                city_id=city_id,
+                district_id=district_id,
+                place=place,
+                mobile=mobile,
+                tel=tel,
+                email=email
+            )
+
+            # 9.判断默认地址是否存在，如果不存在，把刚刚增加的地址作为默认地址
+            if not request.user.default_address:
+                request.user.default_address = address
+                request.user.save()
+
+        except Exception as e:
+            logger.error(e)
+            return JsonResponse({'code': 400,
+                                 'errmsg': '新增地址失败'})
+
+        # 新增地址成功，将新增的地址响应给前端实现局部刷新
+        address_dict = {
+            "id": address.id,
+            "title": address.title,
+            "receiver": address.receiver,
+            "province": address.province.name,
+            "city": address.city.name,
+            "district": address.district.name,
+            "place": address.place,
+            "mobile": address.mobile,
+            "tel": address.tel,
+            "email": address.email
+        }
+
+        # 响应保存结果
+        return JsonResponse({'code': 0,
+                             'errmsg': '新增地址成功',
+                             'address': address_dict})
+
+
+class AddressView(View):
+    def get(self, request):
+        '''前端发送get请求，获取地址信息的借口'''
+
+        try:
+            # 1.从mysql中获取该用户的所有未删除的地址信息
+            addresses = Address.objects.filter(user=request.user,
+                                               is_deleted=False)
+        except Exception as  e:
+            return JsonResponse({'code': 400,
+                                 'errmsg': '从地址列表中获取不到地址信息'})
+        list = []
+        # 2.遍历这些地址信息，获取每一个地址
+        for address in addresses:
+            # 3.把每一个地址信息==> {} ===>[]
+            dict = {
+                "id": address.id,
+                "title": address.title,
+                "receiver": address.receiver,
+                "province": address.province.name,
+                "city": address.city.name,
+                "district": address.district.name,
+                "place": address.place,
+                "mobile": address.mobile,
+                "tel": address.tel,
+                "email": address.email
+
+            }
+
+            if request.user.default_address.id == address.id:
+                # 4.判断该地址信息是否是默认地址，如果是，增加到[]的第一个
+                # 默认地址：
+                list.insert(0, dict)
+            else:
+                # 5.如果不是，追加到[]的后面
+                list.append(dict)
+
+        deault_address_id = request.user.default_address_id
+
+        # 6. 拼接参数，返回json
+        return JsonResponse({
+            'code': 0,
+            'errmsg': 'ok',
+            'default_address_id': deault_address_id,
+            'addresses': list
+        })
+
+
+class UpdateDestroyAddressView(View):
+
+    def put(self, request, address_id):
+        '''修改地址的借口'''
+        # 1.接受前端传来的数据
+        dict = json.loads(request.body.decode())
+        receiver = dict.get('receiver')
+        province_id = dict.get('province_id')
+        city_id = dict.get('city_id')
+        district_id = dict.get('district_id')
+        place = dict.get('place')
+        mobile = dict.get('mobile')
+        tel = dict.get('tel')
+        email = dict.get('email')
+        # 2.检验数据
+        if not all([receiver, province_id, city_id, district_id, place, mobile]):
+            return JsonResponse({'code': 400,
+                                 'errmsg': '缺少必传参数'})
+
+            # 5.单个检验mobile
+        if not re.match(r'^1[3-9]\d{9}$', mobile):
+            return JsonResponse({'code': 400,
+                                 'errmsg': 'mobile格式不正确'})
+
+            # 6.tel
+        if tel:
+            if not re.match(r'^(0[0-9]{2,3}-)?([2-9][0-9]{6,7})+(-[0-9]{1,4})?$', tel):
+                return JsonResponse({'code': 400,
+                                     'errmsg': 'tel格式不正确'})
+            # 7.email
+        if email:
+            if not re.match(r'^[a-z0-9][\w\.\-]*@[a-z0-9\-]+(\.[a-z]{2,5}){1,2}$', email):
+                return JsonResponse({'code': 400,
+                                     'errmsg': 'email格式不正确'})
+
+        # 3.获取address_id对应的查询集.调用查询集的update方法,更新
+        try:
+            address = Address.objects.filter(id=address_id).update(
+                user=request.user,
+                province_id=province_id,
+                city_id=city_id,
+                district_id=district_id,
+                title=receiver,
+                receiver=receiver,
+                place=place,
+                mobile=mobile,
+                tel=tel,
+                email=email
+            )
+        except Exception as e:
+            return JsonResponse({'code': 400,
+                                 'errmsg': '更新失败'})
+
+        # 4.拼接参数, 返回
+        address = Address.objects.get(id=address_id)
+        dict = {
+            "id": address.id,
+            "title": address.title,
+            "receiver": address.receiver,
+            "province": address.province.name,
+            "city": address.city.name,
+            "district": address.district.name,
+            "place": address.place,
+            "mobile": address.mobile,
+            "tel": address.tel,
+            "email": address.email
+        }
+
+        return JsonResponse({'code': 0,
+                             'errmsg': 'ok',
+                             'address': dict})
+
+    def delete(self, request, address_id):
+        # 1.查询要删除的地址
+        try:
+            address = Address.objects.get(id=address_id)
+            # 2.降低至逻辑删除设置为True
+            address.is_deleted = True
+
+            address.save()
+        except Exception as e:
+            logger.error(e)
+            return JsonResponse({'code': 400,
+                                 'errmsg': '删除地址失败'})
+
+        return JsonResponse({'code': 0,
+                             'errmsg': '删除地址成功'})
+
+
+class DefaultAddressView(View):
+    '''设置默认地址'''
+
+    def put(self, request, address_id):
+        '''设置默认地址'''
+        try:
+            # 1.接收参数，查询地址
+            address = Address.objects.get(id=address_id)
+
+            # 设置默认地址
+            request.user.default_address = address
+            request.user.save()
+        except Exception as  e:
+            logger.error(e)
+            return JsonResponse({'code': 400,
+                                 'errmsg': '设置默认地址失败'})
+        return JsonResponse({'code': 0,
+                             'errmsg': '设置默认地址成功'})
+
+
+class UpdateTitleAddressView(View):
+    '''设置标题地址'''
+
+    def put(self, request, address_id):
+
+        # 1. 接受参数：地址标题
+        json_dict = json.loads(request.body.decode())
+        title = json_dict.get('title')
+
+        try:
+            # 查询地址
+            address = Address.objects.get(id=address_id)
+
+            # 设置新的标题
+
+            address.title = title
+            address.save()
+        except Exception as  e:
+            logger.error(e)
+            return JsonResponse({'code': 400,
+                                 'errmsg': '设置地址标题失败'})
+
+        # 相应删除地址结果
+        return JsonResponse({
+            'code': 0,
+            'errmsg': '设置地址标题成功'
+        })
+
+
+class ChangePasswordView(LoginRequiredMixin, View):
+    '''修改密码'''
+
+    def put(self, request):
+        '''实现修改密码逻辑'''
+        # 接收参数
+        dict = json.loads(request.body.decode())
+        old_password = dict.get('old_password')
+        new_password = dict.get('new_password')
+        new_password2 = dict.get('new_password2')
+
+        # 参数效验
+
+        if not all([old_password, new_password, new_password2]):
+            return JsonResponse({'code': 400,
+                                 'errmsg': '缺少必传参数'})
+
+        result = request.user.check_password(old_password)
+        if not result:
+            return JsonResponse({'code': 400,
+                                 'errmsg': '原始密码不正确'})
+        if not re.match(r'^[0-9A-Za-z]{8,20}$', new_password):
+            return http.JsonResponse({'code': 400,
+                                      'errmsg': '密码最少8位,最长20位'})
+
+        if new_password != new_password2:
+            return http.JsonResponse({'code': 400,
+                                      'errmsg': '两次输入密码不一致'})
+
+        # 修改密码
+        try:
+            request.user.set_password(new_password)
+            request.user.save()
+        except Exception as e:
+            logger.error(e)
+            return http.JsonResponse({'code': 400,
+                                      'errmsg': '修改密码失败'})
+
+        # 清理状态保持信息
+        logout(request)
+
+        response = http.JsonResponse({'code': 0,
+                                      'errmsg': 'ok'})
+
+        response.delete_cookie('username')
+
+        # # 响应密码修改结果：重定向到登录界面
+        return response

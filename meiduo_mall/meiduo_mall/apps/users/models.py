@@ -3,12 +3,30 @@ from django.db import models
 from itsdangerous import TimedJSONWebSignatureSerializer, BadData
 from django.conf import settings
 
-
 # Create your models here.
+from meiduo_mall.utils.BaseModel import BaseModel
+
+
 class User(AbstractUser):
     # 增加一个monile 字段；
-    mobile = models.CharField(max_length=11, unique=True, verbose_name='电话号码')
-    email_active = models.BooleanField(default=False, verbose_name='邮箱是否激活')
+    mobile = models.CharField(
+        max_length=11,
+        unique=True,
+        verbose_name='电话号码'
+    )
+    email_active = models.BooleanField(
+        default=False,
+        verbose_name='邮箱是否激活'
+    )
+    # 新增
+    default_address = models.ForeignKey(
+        'Address',
+        related_name='users',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        verbose_name='默认地址'
+    )
 
     class Meta:
         db_table = 'tb_users'
@@ -16,6 +34,7 @@ class User(AbstractUser):
         verbose_name = '用户表'
         # 如果是复数，则还是verbose_name
         verbose_name_plural = verbose_name
+
 
     def __str__(self):
 
@@ -76,3 +95,59 @@ class User(AbstractUser):
         else:
             # 如果存在则直接返回
             return user
+
+
+# 增加地址的模型类, 放到User模型类的下方:
+class Address(BaseModel):
+    """
+    用户地址
+    """
+    user = models.ForeignKey(User,
+                             on_delete=models.CASCADE,
+                             related_name='addresses',
+                             verbose_name='用户')
+
+    province = models.ForeignKey('areas.Area',
+                                 on_delete=models.PROTECT,
+                                 related_name='province_addresses',
+                                 verbose_name='省')
+
+    city = models.ForeignKey('areas.Area',
+                             on_delete=models.PROTECT,
+                             related_name='city_addresses',
+                             verbose_name='市')
+
+    district = models.ForeignKey('areas.Area',
+                                 on_delete=models.PROTECT,
+                                 related_name='district_addresses',
+                                 verbose_name='区')
+
+    title = models.CharField(max_length=20, verbose_name='地址名称')
+    receiver = models.CharField(max_length=20, verbose_name='收货人')
+    place = models.CharField(max_length=50, verbose_name='地址')
+    mobile = models.CharField(max_length=11, verbose_name='手机')
+    tel = models.CharField(max_length=20,
+                           null=True,
+                           blank=True,
+                           default='',
+                           verbose_name='固定电话')
+
+    email = models.CharField(max_length=30,
+                             null=True,
+                             blank=True,
+                             default='',
+                             verbose_name='电子邮箱')
+
+    is_deleted = models.BooleanField(default=False, verbose_name='逻辑删除')
+
+    class Meta:
+        db_table = 'tb_address'
+        verbose_name = '用户地址'
+        verbose_name_plural = verbose_name
+        ordering = ['-update_time']
+'''说明：
+Address 模型类中的外键指向 Areas / models 里面的 Area，指明外键 ForeignKey 时，可以使用字符串应用名.模型类名来定义
+related_name 在进行反向关联查询时使用的属性，
+如 city = models.ForeignKey('areas.Area', related_name='city_addresses')表示可以通过Area对象.
+city_addresses属性获取所有相关的 city 数据。
+ordering 表名在进行 Address 查询时，默认使用的排序方式'''

@@ -56,7 +56,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'verifications.apps.VerificationsConfig',
     'oauth.apps.OauthConfig',
-    'areas'
+    'areas',
+    'contents'
 ]
 
 MIDDLEWARE = [
@@ -158,7 +159,7 @@ CACHES = {
         }
     },
 
-    "verify_code": {
+    "verify_code": {#验证码，信息：存到2号库
         "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": "redis://127.0.0.1:6379/2",
         "OPTIONS": {
