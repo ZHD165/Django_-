@@ -19,6 +19,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 apps_path = os.path.join(BASE_DIR, 'apps')
 # 把绝对路径添加到‘导包路径‘中
 sys.path.insert(0, apps_path)
+
 # print(sys.path)
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
@@ -57,7 +58,13 @@ INSTALLED_APPS = [
     'verifications.apps.VerificationsConfig',
     'oauth.apps.OauthConfig',
     'areas',
-    'contents'
+    'contents',
+    'goods',
+    # 定时任务
+    'django_crontab',
+    # 全文检索
+    'haystack',
+
 ]
 
 MIDDLEWARE = [
@@ -129,7 +136,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/2.2/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
-
+CRONTAB_COMMAND_PREFIX = 'LANG_ALL=zh_cn.UTF-8'
 TIME_ZONE = 'UTC'
 
 USE_I18N = True
@@ -159,9 +166,24 @@ CACHES = {
         }
     },
 
-    "verify_code": {#验证码，信息：存到2号库
+    "verify_code": {  # 验证码，信息：存到2号库
         "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": "redis://127.0.0.1:6379/2",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    },
+
+    "history": { # 用户浏览记录，存贮到3号库
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/3",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    },
+    "carts": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/5",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
@@ -223,8 +245,6 @@ QQ_CLIENT_SECRET = 'c6ce949e04e12ecc909ae6a8b09b637c'
 # 我们申请时添加的: 登录成功后回调的路径
 QQ_REDIRECT_URI = 'http://www.meiduo.site:8080/oauth_callback.html'
 
-
-
 # 发送短信的相关设置, 这些设置是当用户没有发送相关字段时, 默认使用的内容:
 # 发送短信必须进行的设置:
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -240,6 +260,49 @@ EMAIL_HOST_PASSWORD = 'AMOZBHZKVNBLSBSJ'
 # 收件人看到的发件人
 EMAIL_FROM = '张惠棣<18838118792@163.com>'
 
-
 # 邮箱验证链接
 EMAIL_VERIFY_URL = 'http://www.meiduo.site:8080/success_verify_email.html?token='
+
+# 生成的静态 html 文件保存目录
+# 先获取 BASE_DIR 的绝对路径: 即 内层 meiduo_mall 的绝对路径
+# 然后截取最后一级, 即,获取父类的绝对路径.
+# 再截取一级, 拿到项目文件的绝对路径, 然后拼接上 'front_end_pc'
+GENERATED_STATIC_HTML_FILES_DIR = os.path.join(os.path.dirname(os.path.dirname(BASE_DIR)), 'front_end_pc')
+
+# # 设置django的文件存储类，上传文件时 django会调用 该文件存储类的相关方法
+# DEFAULT_FILE_STORAGE = 'utils.fdfs.storage.FDFSStorage'
+#
+# # 设置 fastdfs文件系统 使用的 client.conf文件路径
+# FDFS_CLIENT_CONF = './utils/fdfs/client.conf'
+# # 设置 fastdfs存储服务器上 nginx使用的IP和端口号
+# FDFS_STORAGE_URL = 'http://10.211.55.15:8888/'
+# FDFS需要的配置文件路径(即: client.conf文件绝对路径).
+FDFS_CLIENT_CONF = os.path.join(BASE_DIR, 'utils/fastdfs/client.conf')
+# FDFS中storage和tracker位置.端口规定死是8888, ip换成自己的ip
+# 老师电脑ip为172.16.238.128
+
+# 指定django系统使用的文件存储类:
+DEFAULT_FILE_STORAGE = 'meiduo_mall.utils.fastdfs.fastdfs_storage.FastDFSStorage'
+FDFS_URL = 'http://192.168.138.130:8888/'
+
+# 定时任务
+CRONJOBS = [
+    # 每1分钟生成一次首页静态文件
+    ('*/1 * * * *', 'contents.generate_index.generate_index_html',
+     '>> ' + os.path.join(os.path.dirname(BASE_DIR), 'logs/crontab.log'))
+]
+
+# Haystack
+HAYSTACK_CONNECTIONS = {
+    'default': {
+        'ENGINE': 'haystack.backends.elasticsearch_backend.ElasticsearchSearchEngine',
+        'URL': 'http://192.168.138.129:9200/',  # Elasticsearch服务器ip地址，端口号固定为9200
+        'INDEX_NAME': 'meiduo_mall',  # Elasticsearch建立的索引库的名称
+    },
+}
+
+# 当添加、修改、删除数据时，自动生成索引
+HAYSTACK_SIGNAL_PROCESSOR = 'haystack.signals.RealtimeSignalProcessor'
+
+# 可以在 dev.py 中添加如下代码, 用于决定每页显示数据条数:
+HAYSTACK_SEARCH_RESULTS_PER_PAGE = 5
