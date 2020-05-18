@@ -78,6 +78,29 @@ var vm = new Vue({
                         console.log(error);
                     })
             }
+        },
+           next_operate: function(){
+            if (this.pay_method == 1) {
+                location.href = '/index.html';
+            } else {
+                // 发起支付
+                var url = this.host+'/payment/'+this.order_id+'/'
+                axios.get(url, {
+                        withCredentials:true,
+                        responseType: 'json'
+                    })
+                    .then(response => {
+                       if (response.data.code == 0){
+                           // 跳转到支付宝支付
+                           location.href = response.data.alipay_url;
+                       } else if (response.data.code == 400) {
+                           alert(response.data.errmsg)
+                       }
+                    })
+                    .catch(error => {
+                        console.log(error);
+                    })
+            }
         }
     }
 });

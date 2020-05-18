@@ -2,11 +2,12 @@ import json
 import re
 import logging
 
+from carts.utils import merge_cookie_to_redis
 from goods.models import SKU
+from users.models import User, Address
 
 logger = logging.getLogger('django')
 from django import http
-from users.models import User, Address
 from django.views import View
 from django.contrib.auth import login, logout
 from django.http import JsonResponse, HttpResponse
@@ -114,19 +115,21 @@ class RegisterView(View):
                                             password=password,
                                             mobile=mobile)
         except Exception as e:
-            return http.JsonResponse({'code': 400,
-                                      'errmsg': '保存到数据库出错'})
+            return JsonResponse({'code': 400,
+                                 'errmsg': '保存到数据库出错'})
         login(request, user)
         # 13.拼接json返回
         # 生成响应对象
-        response = http.JsonResponse({'code': 0,
-                                      'errmsg': 'ok'})
+        response = JsonResponse({'code': 0,
+                                 'errmsg': 'ok'})
 
         # 在响应对象中设置用户名信息.
         # 将用户名写入到 cookie，有效期 14 天
-        response.set_cookie('username',
-                            user.username,
-                            max_age=3600 * 24 * 14)
+        # response.set_cookie('username',
+        #                     user.username,
+        #                     max_age=3600 * 24 * 14)
+        # 增加合并购物车功能
+        response = merge_cookie_to_redis(request, response)
 
         # 返回响应结果
         return response
@@ -188,6 +191,9 @@ class LoginView(View):
 
         # response.set_cookie(key, value, max_age)
         response.set_cookie('username', user.username, max_age=3600 * 24 * 14)
+
+        # 增加合并购物车功能
+        response = merge_cookie_to_redis(request, response)
 
         # 12.返回状态
         return response
@@ -637,7 +643,6 @@ class ChangePasswordView(LoginRequiredMixin, View):
         return response
 
 
-
 class UserBrowseHistory(View):
     """用户浏览记录"""
 
@@ -656,7 +661,7 @@ class UserBrowseHistory(View):
 
             return http.HttpResponseForbidden('sku不存在')
 
-        #3.链接redis，获取redis 的链接对象
+        # 3.链接redis，获取redis 的链接对象
         redis_conn = get_redis_connection('history')
         pl = redis_conn.pipeline()
         user_id = request.user.id
@@ -672,7 +677,7 @@ class UserBrowseHistory(View):
 
         # 响应结果
         return JsonResponse({'code': 0,
-                                  'errmsg': 'OK'})
+                             'errmsg': 'OK'})
 
     def get(self, request):
         """获取用户浏览记录"""

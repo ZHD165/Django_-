@@ -64,6 +64,8 @@ INSTALLED_APPS = [
     'django_crontab',
     # 全文检索
     'haystack',
+    'orders',
+    'payment',
 
 ]
 
@@ -306,3 +308,9 @@ HAYSTACK_SIGNAL_PROCESSOR = 'haystack.signals.RealtimeSignalProcessor'
 
 # 可以在 dev.py 中添加如下代码, 用于决定每页显示数据条数:
 HAYSTACK_SEARCH_RESULTS_PER_PAGE = 5
+
+
+ALIPAY_APPID = '2016102200739308'
+ALIPAY_DEBUG = True
+ALIPAY_URL = 'https://openapi.alipaydev.com/gateway.do'
+ALIPAY_RETURN_URL = "http://www.meiduo.site:8080/pay_success.html"

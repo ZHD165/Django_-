@@ -6,6 +6,8 @@ from django.conf import settings
 from django.http import JsonResponse
 import logging
 import json, re
+
+from carts.utils import merge_cookie_to_redis
 from oauth.models import OAuthQQUser
 from oauth.utils import generate_access_token_by_openid, check_access_token
 from django_redis import get_redis_connection
@@ -176,6 +178,7 @@ class QQURLSecondView(View):
 
         # 16.设置cookie:username
         response.set_cookie('username', user.username, max_age=3600 * 24 * 14)
-
+        #增加合并购物车功能：
+        response = merge_cookie_to_redis(request,response)
         # 17.返回json
         return response
