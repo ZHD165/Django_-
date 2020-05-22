@@ -23,4 +23,6 @@ urlpatterns = [
     re_path(r'^payment/(?P<order_id>\d+)/$', views.PaymentsView.as_view()),
 # 订单支付状态
     re_path(r'^payment/status/$', views.SavePaymentView.as_view()),
+    # 订单支付状态
+    re_path(r'^payment/status/$', views.PaymentStatusView.as_view()),
 ]

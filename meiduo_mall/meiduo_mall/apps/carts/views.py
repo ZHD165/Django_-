@@ -393,53 +393,64 @@ class SimpleCartsView(View):
 
     def get(self, request):
         '''获取购物车数据'''
+
         # 1.判断用户是否登录
         if request.user.is_authenticated:
             # 2.如果用户登录
-            # 3.链接redis，获取连接对象
+            # 3.链接redis, 获取链接对象
             redis_conn = get_redis_connection('carts')
-            # 4. 从hash中获取对应的数据：dict
+
+            # 4.从hash中获取对应的数据: dict
             item_dict = redis_conn.hgetall('carts_%s' % request.user.id)
-            # 5.从set中获取对应的数据：集合{}
-            selected_items = redis_conn.smembers('selected_%s' % request.usr.id)
+
+            # 5.从set中获取对应的数据: 集合{}
+            selected_items = redis_conn.smembers('selected_%s' % request.user.id)
 
             cart_dict = {}
 
-            # 6.吧hash中的sku_id &count 放到{}中
-            # 7.判断hash中的sku_id 是否在set 的集合中
-
+            # 6.把hash中的sku_id & count 放到 {} 中
+            # 7.判断hash中的sku_id 是否在 set 的集合中
             for sku_id, count in item_dict.items():
                 cart_dict[int(sku_id)] = {
                     'count': int(count),
                     'selected': sku_id in selected_items
                 }
 
+        else:
+            # 8.如果用户未登录
+            # 9.从cookie中获取数据
+            cookie_cart = request.COOKIES.get('carts')
+
+            # 10.判断该数据是否存在, 如果存在, 解密 ===> dict
+            if cookie_cart:
+                cart_dict = pickle.loads(base64.b64decode(cookie_cart))
             else:
-                # 8.如果用户未登录
-                # 9. 从cookie中获取数据
-                cookie_cart = request.COOKIES.get('cartss')
-                # 10. 判断该数据是否存在，如果存在，解密 ===》dict
-                if cookie_cart:
-                    cart_dict = pickle.loads(base64.b16decode(cookie_cart))
-                else:
-                    cart_dict = {}
-            sku_ids = cart_dict.keys()
+                # 11.如果不存在, 创建新的dict
+                cart_dict = {}
 
-            try:
-                skus = SKU.objects.filter(id__in=sku_ids)
-            except Exception as  e:
-                return JsonResponse({'code': 400,
-                                     'errmsg': '查询数据库报错'})
+        # 12.根据dict, 获取对赢的key: sku_ids
+        sku_ids = cart_dict.keys()
 
-            list = []
+        # 13.把sku_ids ===> skus
+        try:
+            skus = SKU.objects.filter(id__in=sku_ids)
+        except Exception as e:
+            return JsonResponse({'code': 400,
+                                 'errmsg': "查询数据库报错"})
 
-            for sku in skus:
-                list.append({
-                    'id': sku.id,
-                    'default_image_url': sku.default_image_url,
-                    'name': sku.name,
-                    'count': cart_dict.get(sku.id).get('count')
-                })
-            return JsonResponse({'code': 0,
-                                 'errrmasg': 'ok',
-                                 'cart_skus': list})
+        list = []
+
+        # 14.遍历skus, 获取每一个sku ===> {} === []
+        for sku in skus:
+            list.append({
+                'id': sku.id,
+                'default_image_url': sku.default_image_url,
+                'name': sku.name,
+                'count': cart_dict.get(sku.id).get('count'),
+            })
+
+        # 15.拼接参数(json), 返回
+        return JsonResponse({'code': 0,
+                             'errmsg': 'ok',
+                             'cart_skus': list})
+

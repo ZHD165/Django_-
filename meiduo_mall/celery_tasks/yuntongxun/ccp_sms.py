@@ -81,6 +81,6 @@ class CCP(object):
             return -1
 
 
-if __name__ == '__main__':
-    # 注意： 测试的短信模板编号为1
-    CCP().send_template_sms('18838118792', [' ', 5], 1)
+# if __name__ == '__main__':
+#     # 注意： 测试的短信模板编号为1
+#     CCP().send_template_sms('18838118792', [' ', 5], 1)

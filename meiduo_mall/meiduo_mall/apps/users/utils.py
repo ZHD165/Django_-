@@ -66,3 +66,41 @@ class UsernameMobileAuthBackend(ModelBackend):
 #
 #     token = obj.dumps(dict).decode()
 #     return settings.EMAIL_VERIFY_URL + token
+
+
+
+
+def jwt_response_payload_handler(token, user=None, request=None):
+    """
+    自定义jwt认证成功返回数据
+    """
+    return {
+        'token': token,
+        'id': user.id,
+        'username': user.username
+    }
+
+
+from django.contrib.auth.backends import ModelBackend
+import re
+from users.models import User
+
+class UsernameMobileAuthentication(ModelBackend):
+    def authenticate(self, request, username=None, password=None, **kwargs):
+        # 判断是否通过vue组件发送请求
+        if request is None:
+            try:
+                user = User.objects.get(username=username, is_staff=True)
+            except:
+                return None
+            # 判断密码
+            if user.check_password(password):
+                return user
+
+        else:
+            # 自定义一个函数,用来区分username保存的类型: username/mobile
+            user = get_user_by_account(username)
+
+            if user and user.check_password(password):
+
+                return user
