@@ -168,7 +168,9 @@ class LoginView(View):
                                      'errmsg': 'remembered不是bool类型'})
 
         # 6.登录认证(authenticate), 获取用户
-        user = authenticate(username=username,
+        user = authenticate(
+            request=request,
+            username=username,
                             password=password)
 
         # 7.判断该用户是否存在

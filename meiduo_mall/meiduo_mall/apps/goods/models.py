@@ -107,7 +107,10 @@ class Goods(BaseModel):
     # 这组商品的评价数
     comments = models.IntegerField(default=0,
                                    verbose_name='评价数')
-
+    # 新增以下三个字段
+    desc_detail = models.TextField(default='', verbose_name='详细介绍')
+    desc_pack = models.TextField(default='', verbose_name='包装信息')
+    desc_service = models.TextField(default='', verbose_name='售后服务')
     class Meta:
         db_table = 'tb_goods'
         verbose_name = '商品'
@@ -122,7 +125,8 @@ class GoodsSpecification(BaseModel):
     商品规格
     """
     # 这个商品规格属于哪个商品
-    goods = models.ForeignKey(Goods,
+    spu = models.ForeignKey(Goods,
+                              related_name='specs',
                               on_delete=models.CASCADE,
                               verbose_name='商品')
     # 这组规格的名称
@@ -135,7 +139,7 @@ class GoodsSpecification(BaseModel):
         verbose_name_plural = verbose_name
 
     def __str__(self):
-        return '%s: %s' % (self.goods.name, self.name)
+        return '%s: %s' % (self.spu.name, self.name)
 
 
 class SpecificationOption(BaseModel):
@@ -144,6 +148,7 @@ class SpecificationOption(BaseModel):
     """
     # 这个规格选项表对应上面的哪个商品规格
     spec = models.ForeignKey(GoodsSpecification,
+                             related_name='options',  #MIS系统使用
                              on_delete=models.CASCADE,
                              verbose_name='规格')
     # 规格选项的内容
@@ -170,7 +175,7 @@ class SKU(BaseModel):
     caption = models.CharField(max_length=100,
                                verbose_name='副标题')
     # 这个商品对应 goods 表中的那个字段
-    goods = models.ForeignKey(Goods,
+    spu = models.ForeignKey(Goods,
                               on_delete=models.CASCADE,
                               verbose_name='商品')
     # 这个商品的类别
@@ -243,6 +248,7 @@ class SKUSpecification(BaseModel):
     """
     # 对应的SKU值
     sku = models.ForeignKey(SKU,
+                            related_name='specs',   # MIS系统使用
                             on_delete=models.CASCADE,
                             verbose_name='sku')
     # 对应哪一个规格
@@ -261,3 +267,16 @@ class SKUSpecification(BaseModel):
 
     def __str__(self):
         return '%s: %s - %s' % (self.sku, self.spec.name, self.option.value)
+
+
+
+class GoodsVisitCount(BaseModel):
+    """统计分类商品访问量模型类"""
+    category = models.ForeignKey(GoodsCategory, on_delete=models.CASCADE, verbose_name='商品分类')
+    count = models.IntegerField(verbose_name='访问量', default=0)
+    date = models.DateField(auto_now_add=True, verbose_name='统计日期')
+
+    class Meta:
+        db_table = 'tb_goods_visit'
+        verbose_name = '统计分类商品访问量'
+        verbose_name_plural = verbose_name

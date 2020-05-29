@@ -32,5 +32,6 @@ urlpatterns = [
     path(r'', include('orders.urls')),
     # payment
     path(r'', include('payment.urls')),
+    path(r'',include('meiduo_admin.urls')),
 
 ]

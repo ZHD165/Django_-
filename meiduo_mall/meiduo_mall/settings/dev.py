@@ -39,7 +39,9 @@ CORS_ORIGIN_WHITELIST = (
     'http://127.0.0.1:8080',
     'http://localhost:8080',
     'http://www.meiduo.site:8080',
-    'http://www.meiduo.site:8000'
+    'http://www.meiduo.site:8000',
+    'http://www.meiduo.site:8081',
+
 )
 CORS_ALLOW_CREDENTIALS = True  # 允许携带cookie
 
@@ -67,6 +69,9 @@ INSTALLED_APPS = [
     'haystack',
     'orders',
     'payment',
+    # 'meiduo_admin',
+    'rest_framework',
+    'django_extensions',
 
 ]
 
@@ -141,13 +146,13 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 CRONTAB_COMMAND_PREFIX = 'LANG_ALL=zh_cn.UTF-8'
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Shanghai'
 
 USE_I18N = True
 
 USE_L10N = True
 
-USE_TZ = True
+USE_TZ = False
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
@@ -286,7 +291,7 @@ FDFS_CLIENT_CONF = os.path.join(BASE_DIR, 'utils/fastdfs/client.conf')
 
 
 
-FDFS_URL = 'http://192.168.70.128:8888/'
+FDFS_URL = 'http://192.168.1.6:8888/'
 # 指定django系统使用的文件存储类:
 DEFAULT_FILE_STORAGE = 'meiduo_mall.utils.fastdfs.fastdfs_storage.FastDFSStorage'
 # 定时任务
@@ -300,7 +305,7 @@ CRONJOBS = [
 HAYSTACK_CONNECTIONS = {
     'default': {
         'ENGINE': 'haystack.backends.elasticsearch_backend.ElasticsearchSearchEngine',
-        'URL': 'http://192.168.78.120:9200/',  # Elasticsearch服务器ip地址，端口号固定为9200
+        'URL': 'http://192.168.1.6:9200/',  # Elasticsearch服务器ip地址，端口号固定为9200
         'INDEX_NAME': 'meiduo_mall',  # Elasticsearch建立的索引库的名称
     },
 }
@@ -309,28 +314,36 @@ HAYSTACK_CONNECTIONS = {
 HAYSTACK_SIGNAL_PROCESSOR = 'haystack.signals.RealtimeSignalProcessor'
 
 # 可以在 dev.py 中添加如下代码, 用于决定每页显示数据条数:
-HAYSTACK_SEARCH_RESULTS_PER_PAGE = 5
+HAYSTACK_SEARCH_RESULTS_PER_PAGE = 2
 
 
 ALIPAY_APPID = '2016102200739308'
 ALIPAY_DEBUG = True
 ALIPAY_URL = 'https://openapi.alipaydev.com/gateway.do'
 ALIPAY_RETURN_URL = "http://www.meiduo.site:8080/pay_success.html"
-
+###############################################################################################################################################################################################3
+# DRF配置
 
 REST_FRAMEWORK = {
+    #权限
+    #必须是登录用户才能访问
+    # 'DEFAULT_PERMISSION_CLASSES': (
+    #     'rest_framework.permissions.IsAuthenticated',
+    # ),
+    #认证
+    #认证的顺序是按照我们写的顺序来验证的
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_jwt.authentication.JSONWebTokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.BasicAuthentication',
+        # 'rest_framework.authentication.BasicAuthentication',
     ),
 }
 import datetime
 JWT_AUTH = {
-    'JWT_EXPIRATION_DELTA': datetime.timedelta(days=1),
-    'JWT_RESPONSE_PAYLOAD_HANDLER': 'meiduo_admin.apps.users.utils.jwt_response_payload_handler',
+    'JWT_EXPIRATION_DELTA': datetime.timedelta(days=14),
+    'JWT_RESPONSE_PAYLOAD_HANDLER': 'meiduo_admin.utils.jwt_response_payload_handler',
 }
 # 可以在 dev.py 中添加如下代码, 用于决定每页显示数据条数:
-HAYSTACK_SEARCH_RESULTS_PER_PAGE = 2
+HAYSTACK_SEARCH_RESULTS_PER_PAGE = 10
 # 当添加、修改、删除数据时，自动生成索引
 HAYSTACK_SIGNAL_PROCESSOR = 'haystack.signals.RealtimeSignalProcessor'

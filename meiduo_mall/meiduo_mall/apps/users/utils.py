@@ -1,10 +1,7 @@
-# 导入:
-from django.conf import settings
 from django.contrib.auth.backends import ModelBackend
 import re
+
 from users.models import User
-
-
 def get_user_by_account(account):
     '''判断 account 是否是手机号, 返回 user 对象'''
     try:
@@ -26,81 +23,87 @@ def get_user_by_account(account):
         return user
 
 
-# 继承自 ModelBackend, 重写 authenticate 函数
 class UsernameMobileAuthBackend(ModelBackend):
-    """自定义用户认证后端"""
-
     def authenticate(self, request, username=None, password=None, **kwargs):
+        '''重写认证函数:使其具有手机号的认证功能'''
+
         """
-        重写认证方法，实现用户名和mobile登录功能
-        :param request: 请求对象
-        :param username: 用户名
-        :param password: 密码
-        :param kwargs: 其他参数
-        :return: user
-        """
+            问题： 
+            meihao 这个账户应该只能登录 前端
+            不能应该登录 后台
 
-        # 自定义验证用户是否存在的函数:
-        # 根据传入的 username 获取 user 对象
-        # username 可以是手机号也可以是账号
-        user = get_user_by_account(username)
+            meihao 既可以登录后台 也可以登录前端
+            1. 因为 DRF 和 Django用的一套认证  （肯定是同一个表）
 
-        # 校验 user 是否存在并校验密码是否正确
-        if user and user.check_password(password):
-            # 如果user存在, 密码正确, 则返回 user
-            return user
+            2. 该如何区分 后端登录  和 前端登录
+                前端登录 --> 手机号，用户名登录    login/
+                后端登录 --> 用户名               meiduo_admin/authorizations/
 
-
-# from itsdangerous import TimedJSONWebSignatureSerializer
-# from django.conf import settings
-#
-#
-# def generate_access_token():
-#     '''生成一个token值，把token和url的前半部分拼接到一起，返回'''
-#     # TimedJSONWebSignatureSerializer(秘钥，有效期)
-#     obj = TimedJSONWebSignatureSerializer(settings.SECRET_KEY, expires_in=1800)
-#     dict = {
-#         'user_id': user.id,
-#         'email': user.email
-#     }
-#
-#     token = obj.dumps(dict).decode()
-#     return settings.EMAIL_VERIFY_URL + token
-
-
-
-
-def jwt_response_payload_handler(token, user=None, request=None):
-    """
-    自定义jwt认证成功返回数据
-    """
-    return {
-        'token': token,
-        'id': user.id,
-        'username': user.username
-    }
-
-
-from django.contrib.auth.backends import ModelBackend
-import re
-from users.models import User
-
-class UsernameMobileAuthentication(ModelBackend):
-    def authenticate(self, request, username=None, password=None, **kwargs):
-        # 判断是否通过vue组件发送请求
+            3. 最终都会到 我们自定义的认证这里
+            4.  
+                后台用户的一个 is_superuser(管理员) 标记必须为True
+            """
+        # 到底该如何区分谁是前端，谁是后端
         if request is None:
+            # 后台用户走 后台验证逻辑
+            # 后台验证
             try:
-                user = User.objects.get(username=username, is_staff=True)
+                admin_user = User.objects.get(username=username,is_staff =True)
             except:
-                return None
-            # 判断密码
-            if user.check_password(password):
-                return user
+                return  None
+            #   验证密码 并且 验证权限
+            if admin_user.check_password(password) and admin_user.is_superuser:
+                return admin_user
 
         else:
+            # 普通用户还走原来的业务逻辑
             # 自定义一个函数,用来区分username保存的类型: username/mobile
             user = get_user_by_account(username)
 
             if user and user.check_password(password):
-
                 return user
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
